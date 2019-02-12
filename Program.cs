@@ -11,6 +11,8 @@ namespace GitProxy
 {
     class Program
     {
+        private static readonly string wslpath = "/home/user/bin/wslpath";
+
         public static string Quote(IList args)
         {
             StringBuilder sb = new StringBuilder();
@@ -69,7 +71,7 @@ namespace GitProxy
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = @"c:\windows\system32\cmd.exe",
-                Arguments = "/c c:\\windows\\system32\\wsl.exe /home/user/bin/wslpath " + arg,
+                Arguments = "/c c:\\windows\\system32\\wsl.exe " + wslpath + " " + arg,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
             };
@@ -106,13 +108,15 @@ namespace GitProxy
 
             //File.AppendAllText(@"c:\\users\\user\\debug.txt", "JOINED ARGS: " + joinedArgs + Environment.NewLine);
 
+            string programName = Path.GetFileNameWithoutExtension(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
+
             string curDir = Environment.CurrentDirectory;
             curDir = "'" + curDir.Replace("'", "'\\''") + "'";
 
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = @"c:\windows\system32\cmd.exe",
-                Arguments = "/c c:\\windows\\system32\\wsl.exe cd \"`/home/user/bin/wslpath " + curDir + "`\"; git " + joinedArgs,
+                Arguments = "/c c:\\windows\\system32\\wsl.exe cd \"`" + wslpath + " " + curDir + "`\"; " + programName + " " + joinedArgs,
                 UseShellExecute = false,
             };
             var process = new FixedProcess();
