@@ -5,13 +5,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GitProxy
 {
     class Program
     {
-        private static readonly string wslpath = "/home/user/bin/wslpath";
+        private static readonly string wslpath = "/bin/wslpath";
 
         public static string Quote(IList args)
         {
@@ -113,16 +114,43 @@ namespace GitProxy
             string curDir = Environment.CurrentDirectory;
             curDir = "'" + curDir.Replace("'", "'\\''") + "'";
 
+            bool fix = true;
+            string tempStdout = null, tempStderr = null;
+            if (fix)
+            {
+                programName = "git";
+                tempStdout = Path.GetTempPath() + Guid.NewGuid().ToString() + ".tmp";
+                tempStderr = Path.GetTempPath() + Guid.NewGuid().ToString() + ".tmp";
+                joinedArgs += " >" + tempStdout + " 2>" + tempStderr;
+            }
+
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = @"c:\windows\system32\cmd.exe",
                 Arguments = "/c c:\\windows\\system32\\wsl.exe cd \"`" + wslpath + " " + curDir + "`\"; " + programName + " " + joinedArgs,
                 UseShellExecute = false,
+                RedirectStandardOutput = false,
             };
-            var process = new FixedProcess();
+
+            var process = new Process();
             process.StartInfo = processStartInfo;
-            process.EnableRaisingEvents = true;
-            process.Start();
+            if (fix)
+            {
+                process.Start();
+                process.WaitForExit();
+                byte[] outputBytes = File.ReadAllBytes(tempStdout);
+                string output = Encoding.UTF8.GetString(outputBytes);
+                byte[] stderrBytes = File.ReadAllBytes(tempStderr);
+                string stderr = Encoding.UTF8.GetString(stderrBytes);
+                File.Delete(tempStdout);
+                File.Delete(tempStderr);
+                output = output.Replace("/mnt/c/", "c:/");
+                stderr = stderr.Replace("/mnt/c/", "c:/");
+                Console.Write(output);
+                Console.Error.Write(stderr);
+                //File.AppendAllText(@"c:\\users\\user\\debug2.txt", "OUTPUT: " + output);
+            }
+
             process.WaitForExit();
             Environment.Exit(process.ExitCode);
         }
